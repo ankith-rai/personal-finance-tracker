@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3.12
 
 import getopt
 import os
@@ -39,7 +39,7 @@ def run(reset, reset_db):
     args = ''
     if reset:
         args += ' --force-recreate'
-    sys.exit(os.system(f'docker-compose up{args}'))
+    sys.exit(os.system(f'docker compose up{args}'))
 
 
 if __name__=='__main__':
