@@ -1,4 +1,3 @@
-// src/graphql/resolvers.ts
 import pool from '../db';
 
 interface Transaction {
