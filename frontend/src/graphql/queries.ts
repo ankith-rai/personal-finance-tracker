@@ -7,6 +7,8 @@ export const GET_TRANSACTIONS = gql`
       description
       amount
       date
+      type
+      category
     }
   }
 `;
