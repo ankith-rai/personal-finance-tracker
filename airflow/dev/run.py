@@ -2,13 +2,17 @@
 
 import getopt
 import os
+import pathlib
 import platform
+import shutil
 import sys
 
 
 def is_windows():
     return platform.uname().system == 'windows'
 
+PYTHON = 'python.exe' if is_windows() else 'python3'
+VENV_PYTHON = '.venv\\Scripts\\python.exe' if is_windows() else '.venv/bin/python3'
 
 def container_exists(name):
     return os.system(f'docker ps -a --format "{{{{.Names}}}}" | grep -q "^{name}$"') == 0
@@ -18,12 +22,43 @@ def volume_exists(name):
     return os.system(f'docker volume ls --format "{{{{.Name}}}}" | grep -q "^{name}$"') == 0
 
 
+def init(reset, requirements):
+    def exec(cmd):
+        if os.system(cmd) != 0:
+            sys.exit()
+
+    if '.venv' in sys.executable:
+        print('This script must be run with the global python interpretor, not the one in the virtual environment')
+        sys.exit(1)
+    
+    if reset and pathlib.Path('venv').exists():
+        print('Deleting existing virual environment...')
+        shutil.rmtree('.venv')
+
+    if not pathlib.Path('.venv').exists():
+        print('Creating virtual environment...')
+        exec(f'{PYTHON} -m venv .venv')
+        exec(f'{VENV_PYTHON} -m pip install --upgrade pip')
+    
+    exec(f'{VENV_PYTHON} -m pip install -r {requirements}')
+
 def run(reset, reset_db):
+
+    wd = os.getcwd()
+    os.chdir('..')
+    init(reset, 'requirements.txt')
+    os.chdir(wd)
+
+    usmask = os.umask(0o0000)
+    pathlib.Path('airflow/logs').mkdir(parents=True, exist_ok=True)
+    pathlib.Path('airflow/plugins').mkdir(parents=True, exist_ok=True)
+    os.umask(usmask)
 
     with open('../requirements.txt', 'r') as file:
         requirements = file.read()
 
     os.environ['_PIP_ADDITIONAL_REQUIREMENTS'] = requirements
+    os.environ['I']
     os.environ['AIRFLOW_UID'] = '50000' if is_windows() else str(os.getuid())
 
     if reset_db:
