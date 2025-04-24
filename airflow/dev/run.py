@@ -58,7 +58,6 @@ def run(reset, reset_db):
         requirements = file.read()
 
     os.environ['_PIP_ADDITIONAL_REQUIREMENTS'] = requirements
-    os.environ['I']
     os.environ['AIRFLOW_UID'] = '50000' if is_windows() else str(os.getuid())
 
     if reset_db:
