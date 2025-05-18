@@ -1,6 +1,7 @@
 import React from "react";
 import { ApolloProvider, InMemoryCache, ApolloClient } from "@apollo/client";
 import Transactions from "./components/Transactions";
+import LoginPage from "./components/Login";
 
 const client = new ApolloClient({
   uri: "http://localhost:4000",
@@ -14,7 +15,7 @@ const App: React.FC = () => (
       <Transactions />
     </div>
     <div>
-      {/* TODO: Import and implement LoginPage component */}
+      <LoginPage />
     </div>
   </ApolloProvider>
 );
