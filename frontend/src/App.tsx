@@ -73,8 +73,8 @@ const App: React.FC = () => {
     <ApolloProvider client={client}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <AuthProvider>
-          <Router>
+        <Router>
+          <AuthProvider>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               <NavBar />
               <main style={{ flex: 1, padding: '2rem 0' }}>
@@ -101,8 +101,8 @@ const App: React.FC = () => {
                 </Routes>
               </main>
             </div>
-          </Router>
-        </AuthProvider>
+          </AuthProvider>
+        </Router>
       </ThemeProvider>
     </ApolloProvider>
   );
