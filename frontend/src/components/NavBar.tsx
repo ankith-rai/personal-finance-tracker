@@ -1,36 +1,23 @@
 import React from 'react';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  Box, 
-  Avatar,
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Container,
+  IconButton,
   Menu,
   MenuItem,
-  IconButton,
-  SvgIcon,
-  useTheme
+  Avatar,
 } from '@mui/material';
-import { useSession } from '../context/SessionContext';
+import { AccountCircle } from '@mui/icons-material';
 
-interface NavBarProps {
-  onNavigate: (page: string) => void;
-  currentPage: string;
-}
-
-// Inline SVG for wallet icon
-function WalletIcon(props: any) {
-  return (
-    <SvgIcon {...props}>
-      <path d="M2 7c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V7zm2 0v10h16V7H4zm2 2h8v2H6V9z" />
-    </SvgIcon>
-  );
-}
-
-const NavBar: React.FC<NavBarProps> = ({ onNavigate, currentPage }) => {
-  const { isAuthenticated, user, logout } = useSession();
-  const theme = useTheme();
+const NavBar: React.FC = () => {
+  const { isAuthenticated, user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -42,45 +29,41 @@ const NavBar: React.FC<NavBarProps> = ({ onNavigate, currentPage }) => {
   };
 
   return (
-    <AppBar 
-      position="static" 
-      elevation={0}
-      sx={{ 
-        background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
-      }}
-    >
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-          <WalletIcon sx={{ mr: 1 }} />
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              fontWeight: 600,
-              letterSpacing: '0.5px'
+    <AppBar position="static" color="primary" elevation={0}>
+      <Container maxWidth="lg">
+        <Toolbar disableGutters>
+          <Typography
+            variant="h6"
+            component={Link}
+            to="/"
+            sx={{
+              flexGrow: 1,
+              textDecoration: 'none',
+              color: 'inherit',
+              fontWeight: 700,
             }}
           >
             Finance Tracker
           </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+
           {isAuthenticated ? (
             <>
-              <Button 
-                variant="outlined"
-                color="inherit" 
-                onClick={() => onNavigate('transactions')}
-                sx={{ 
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-              >
-                Transactions
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, mr: 2 }}>
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to="/transactions"
+                >
+                  Transactions
+                </Button>
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to="/invoices"
+                >
+                  Invoices
+                </Button>
+              </Box>
               <IconButton
                 size="large"
                 aria-label="account of current user"
@@ -89,15 +72,13 @@ const NavBar: React.FC<NavBarProps> = ({ onNavigate, currentPage }) => {
                 onClick={handleMenu}
                 color="inherit"
               >
-                <Avatar 
-                  sx={{ 
-                    width: 32, 
-                    height: 32,
-                    bgcolor: theme.palette.primary.dark
-                  }}
-                >
-                  {user?.name?.[0]?.toUpperCase()}
-                </Avatar>
+                {user?.name ? (
+                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                    {user.name[0].toUpperCase()}
+                  </Avatar>
+                ) : (
+                  <AccountCircle />
+                )}
               </IconButton>
               <Menu
                 id="menu-appbar"
@@ -114,53 +95,38 @@ const NavBar: React.FC<NavBarProps> = ({ onNavigate, currentPage }) => {
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
               >
-                <MenuItem onClick={handleClose}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {user?.name}
-                  </Typography>
+                <MenuItem disabled>
+                  <Typography variant="body2">{user?.name}</Typography>
                 </MenuItem>
                 <MenuItem onClick={() => {
                   handleClose();
-                  logout();
+                  signOut();
                 }}>
-                  Logout
+                  Sign Out
                 </MenuItem>
               </Menu>
             </>
           ) : (
-            <>
-              <Button 
-                variant="outlined"
-                color="inherit" 
-                onClick={() => onNavigate('login')}
-                sx={{ 
-                  borderColor: 'rgba(255, 255, 255, 0.5)',
-                  '&:hover': {
-                    borderColor: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                color="inherit"
+                component={Link}
+                to="/login"
               >
-                Login
+                Sign In
               </Button>
-              <Button 
+              <Button
                 variant="contained"
-                color="inherit" 
-                onClick={() => onNavigate('signup')}
-                sx={{ 
-                  backgroundColor: 'white',
-                  color: theme.palette.primary.main,
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)'
-                  }
-                }}
+                color="secondary"
+                component={Link}
+                to="/signup"
               >
                 Sign Up
               </Button>
-            </>
+            </Box>
           )}
-        </Box>
-      </Toolbar>
+        </Toolbar>
+      </Container>
     </AppBar>
   );
 };

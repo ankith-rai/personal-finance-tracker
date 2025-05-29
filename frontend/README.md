@@ -1,63 +1,45 @@
-# Personal Finance Tracker - Frontend
+# Personal Finance Tracker Frontend
 
-This is the frontend application for the Personal Finance Tracker. It is built using **React (Vite)** with **TypeScript**, styled with **Tailwind CSS**, and uses **Apollo Client** for interacting with the backend GraphQL API.
+This is the frontend for the Personal Finance Tracker application. It provides a modern, responsive UI for managing your finances, built with React, TypeScript, Material UI v6, and Apollo Client.
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Available Scripts](#available-scripts)
-- [Folder Structure](#folder-structure)
-- [Technologies Used](#technologies-used)
+## Features
+- User sign up and sign in
+- Add, update, and delete finance transactions
+- Create and view invoices
+- Responsive, modern UI (Material UI v6)
+- GraphQL integration with Apollo Client
 
 ## Prerequisites
-- **Node.js** (v14 or higher)
-- **npm** or **yarn**
+- Node.js (v16+ recommended)
+- The backend server running (see `../backend/README.md`)
 
-## Getting Started
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/personal-finance-tracker.git
-cd personal-finance-tracker/frontend
-```
-
-### 2. Install Dependencies
-```bash
+## Install Dependencies
+```sh
 npm install
 ```
 
-### 3. Start the Frontend
-```bash
+## Running the Frontend
+```sh
 npm run dev
 ```
 
-This will start the frontend development server on [http://localhost:3000](http://localhost:3000).
+The app will start on [http://localhost:5173](http://localhost:5173) by default (Vite).
 
-## Available Scripts
-- **`npm run dev`**: Start the Vite development server.
-- **`npm run build`**: Build the production version of the app.
-- **`npm run serve`**: Serve the production build.
+## Environment
+- By default, the frontend expects the backend GraphQL API at `http://localhost:4000`.
+- If your backend runs elsewhere, update the URI in `src/App.tsx`.
 
-## Folder Structure
-```
-frontend/
-├── public/
-├── src/
-│   ├── components/      # React components
-│   ├── apollo-client.ts # Apollo Client configuration
-│   ├── App.tsx          # Main app component
-│   ├── index.tsx        # Entry point for React
-│   ├── styles/          # Tailwind CSS configuration
-├── package.json         # Dependencies and scripts
-├── tailwind.config.js   # Tailwind CSS configuration
-├── tsconfig.json        # TypeScript configuration
-├── vite.config.ts       # Vite configuration
-├── README.md            # Frontend documentation
-```
+## Project Structure
+- `src/components/` - React components (Login, SignUp, Transactions, Invoices, NavBar)
+- `src/context/` - Authentication context
+- `src/graphql/` - GraphQL queries
+- `src/App.tsx` - Main app and routing
 
-## Technologies Used
-- **React (Vite)**: Frontend framework for building UI components
-- **TypeScript**: Type-safe JavaScript
-- **Apollo Client**: GraphQL client for data fetching
-- **Tailwind CSS**: Utility-first CSS framework for styling
-- **GraphQL**: API specification
+## UI/UX
+- Built with Material UI v6 for a modern, accessible, and responsive experience
+- Two-column responsive login page
+- Mobile-friendly navigation
+
+---
+
+For the backend, see the `../backend/README.md` file.
