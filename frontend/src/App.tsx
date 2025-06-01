@@ -1,60 +1,109 @@
-import React, { useState } from "react";
-import { ApolloProvider, InMemoryCache, ApolloClient, HttpLink, from } from "@apollo/client";
-import { onError } from "@apollo/client/link/error";
-import { Container } from '@mui/material';
-import Transactions from "./components/Transactions";
-import LoginPage from "./components/Login";
-import SignUp from "./components/SignUp";
-import NavBar from "./components/NavBar";
-import { SessionProvider } from "./context/SessionContext";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ApolloProvider, ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import NavBar from './components/NavBar';
+import Login from './components/Login';
+import SignUp from './components/SignUp';
+import Transactions from './components/Transactions';
+import Invoices from './components/Invoices';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors)
-    graphQLErrors.forEach(({ message, locations, path }) =>
-      console.error(
-        `[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`
-      )
-    );
-  if (networkError) console.error(`[Network error]: ${networkError}`);
-});
-
-const httpLink = new HttpLink({
-  uri: "http://localhost:4000"
-});
-
-const client = new ApolloClient({
-  link: from([errorLink, httpLink]),
-  cache: new InMemoryCache(),
-  defaultOptions: {
-    watchQuery: {
-      fetchPolicy: "cache-and-network",
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+    background: {
+      default: '#f5f5f5',
+    },
+  },
+  typography: {
+    fontFamily: [
+      '-apple-system',
+      'BlinkMacSystemFont',
+      '"Segoe UI"',
+      'Roboto',
+      '"Helvetica Neue"',
+      'Arial',
+      'sans-serif',
+    ].join(','),
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+        },
+      },
     },
   },
 });
 
-const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('transactions');
+const httpLink = createHttpLink({
+  uri: 'http://localhost:4000',
+});
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'login':
-        return <LoginPage />;
-      case 'signup':
-        return <SignUp />;
-      case 'transactions':
-      default:
-        return <Transactions />;
-    }
+const authLink = setContext((_, { headers }) => {
+  const token = localStorage.getItem('token');
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : '',
+    },
   };
+});
 
+const client = new ApolloClient({
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache(),
+});
+
+const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+};
+
+const App: React.FC = () => {
   return (
     <ApolloProvider client={client}>
-      <SessionProvider>
-        <NavBar currentPage={currentPage} onNavigate={setCurrentPage} />
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
-          {renderPage()}
-        </Container>
-      </SessionProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AuthProvider>
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+              <NavBar />
+              <main style={{ flex: 1, padding: '2rem 0' }}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route
+                    path="/transactions"
+                    element={
+                      <PrivateRoute>
+                        <Transactions />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/invoices"
+                    element={
+                      <PrivateRoute>
+                        <Invoices />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route path="/" element={<Navigate to="/transactions" />} />
+                </Routes>
+              </main>
+            </div>
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
     </ApolloProvider>
   );
 };
