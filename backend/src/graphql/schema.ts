@@ -15,7 +15,7 @@ export const typeDefs = gql`
     signUp(email: String!, password: String!, name: String!): AuthPayload!
     signIn(email: String!, password: String!): AuthPayload!
     createInvoice(transactions: [ID!]!, clientName: String!, clientEmail: String!, dueDate: String!): Invoice!
-  }
+}
 
   type Transaction {
     id: ID!
