@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
+import { 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Button, 
+  Box, 
   Container,
   IconButton,
   Menu,
@@ -32,11 +32,11 @@ const NavBar: React.FC = () => {
     <AppBar position="static" color="primary" elevation={0}>
       <Container maxWidth="lg">
         <Toolbar disableGutters>
-          <Typography
-            variant="h6"
+          <Typography 
+            variant="h6" 
             component={Link}
             to="/"
-            sx={{
+            sx={{ 
               flexGrow: 1,
               textDecoration: 'none',
               color: 'inherit',
@@ -49,13 +49,13 @@ const NavBar: React.FC = () => {
           {isAuthenticated ? (
             <>
               <Box sx={{ display: 'flex', gap: 2, mr: 2 }}>
-                <Button
-                  color="inherit"
+              <Button 
+                color="inherit" 
                   component={Link}
                   to="/transactions"
-                >
-                  Transactions
-                </Button>
+              >
+                Transactions
+              </Button>
                 <Button
                   color="inherit"
                   component={Link}
@@ -75,7 +75,7 @@ const NavBar: React.FC = () => {
                 {user?.name ? (
                   <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
                     {user.name[0].toUpperCase()}
-                  </Avatar>
+                </Avatar>
                 ) : (
                   <AccountCircle />
                 )}
@@ -108,14 +108,14 @@ const NavBar: React.FC = () => {
             </>
           ) : (
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                color="inherit"
+              <Button 
+                color="inherit" 
                 component={Link}
                 to="/login"
               >
                 Sign In
               </Button>
-              <Button
+              <Button 
                 variant="contained"
                 color="secondary"
                 component={Link}
@@ -125,7 +125,7 @@ const NavBar: React.FC = () => {
               </Button>
             </Box>
           )}
-        </Toolbar>
+      </Toolbar>
       </Container>
     </AppBar>
   );
