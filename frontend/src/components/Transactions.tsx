@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { GET_TRANSACTIONS, CREATE_TRANSACTION } from "../graphql/queries";
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Fab, MenuItem, Box
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Fab, MenuItem, Box, Snackbar, Alert, InputAdornment, Typography, Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { styled } from '@mui/system';
@@ -24,6 +24,10 @@ const StyledTableCell = styled(TableCell)({
   backgroundColor: '#e0e0e0',
 });
 
+const CATEGORY_OPTIONS = [
+  'Salary', 'Groceries', 'Utilities', 'Rent', 'Dining', 'Travel', 'Shopping', 'Health', 'Education', 'Other'
+];
+
 interface Transaction {
   id: number;
   date: string;
@@ -37,6 +41,7 @@ const Transactions: React.FC = () => {
   const { loading, error, data, refetch } = useQuery(GET_TRANSACTIONS);
   const [createTransaction] = useMutation(CREATE_TRANSACTION, {
     onCompleted: () => {
+      setSuccess(true);
       handleClose();
       refetch();
     },
@@ -49,27 +54,44 @@ const Transactions: React.FC = () => {
     date: '',
     type: '',
     category: '',
+    customCategory: '',
   });
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState<{ [key: string]: string }>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setForm({ description: '', amount: '', date: '', type: '', category: '' });
-    setFormError('');
+    setForm({ description: '', amount: '', date: '', type: '', category: '', customCategory: '' });
+    setFormError({});
+    setSubmitting(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setFormError({ ...formError, [e.target.name]: '' });
+  };
+
+  const validate = () => {
+    const errors: { [key: string]: string } = {};
+    if (!form.description.trim()) errors.description = 'Description is required.';
+    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0) errors.amount = 'Enter a positive amount.';
+    if (!form.date) errors.date = 'Date is required.';
+    if (!form.type) errors.type = 'Type is required.';
+    if (!form.category && !form.customCategory.trim()) errors.category = 'Category is required.';
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError('');
-    if (!form.description || !form.amount || !form.date || !form.type || !form.category) {
-      setFormError('All fields are required.');
+    setFormError({});
+    const errors = validate();
+    if (Object.keys(errors).length > 0) {
+      setFormError(errors);
       return;
     }
+    setSubmitting(true);
     try {
       await createTransaction({
         variables: {
@@ -77,11 +99,12 @@ const Transactions: React.FC = () => {
           amount: parseFloat(form.amount),
           date: form.date,
           type: form.type,
-          category: form.category,
+          category: form.category === 'custom' ? form.customCategory : form.category,
         },
       });
     } catch (err) {
-      setFormError('Failed to add transaction.');
+      setFormError({ submit: 'Failed to add transaction.' });
+      setSubmitting(false);
     }
   };
 
@@ -124,8 +147,9 @@ const Transactions: React.FC = () => {
       </Fab>
       <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
         <DialogTitle>Add Transaction</DialogTitle>
+        <Divider />
         <form onSubmit={handleSubmit}>
-          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
             <TextField
               label="Description"
               name="description"
@@ -133,6 +157,8 @@ const Transactions: React.FC = () => {
               onChange={handleChange}
               fullWidth
               required
+              error={!!formError.description}
+              helperText={formError.description || 'E.g. Grocery shopping, Salary, etc.'}
             />
             <TextField
               label="Amount"
@@ -142,7 +168,12 @@ const Transactions: React.FC = () => {
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ step: '0.01' }}
+              error={!!formError.amount}
+              helperText={formError.amount || 'Enter a positive value'}
+              inputProps={{ step: '0.01', min: 0 }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
             />
             <TextField
               label="Date"
@@ -152,6 +183,8 @@ const Transactions: React.FC = () => {
               onChange={handleChange}
               fullWidth
               required
+              error={!!formError.date}
+              helperText={formError.date || ''}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
@@ -162,6 +195,8 @@ const Transactions: React.FC = () => {
               select
               fullWidth
               required
+              error={!!formError.type}
+              helperText={formError.type || ''}
             >
               <MenuItem value="income">Income</MenuItem>
               <MenuItem value="expense">Expense</MenuItem>
@@ -171,17 +206,49 @@ const Transactions: React.FC = () => {
               name="category"
               value={form.category}
               onChange={handleChange}
+              select
               fullWidth
-              required
-            />
-            {formError && <Box color="error.main">{formError}</Box>}
+              required={!form.customCategory}
+              error={!!formError.category}
+              helperText={formError.category || 'Choose a category or select Other to enter your own'}
+            >
+              {CATEGORY_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+              <MenuItem value="custom">Other (Custom)</MenuItem>
+            </TextField>
+            {form.category === 'custom' && (
+              <TextField
+                label="Custom Category"
+                name="customCategory"
+                value={form.customCategory}
+                onChange={handleChange}
+                fullWidth
+                required
+                error={!!formError.category}
+                helperText={formError.category || 'Enter your custom category'}
+              />
+            )}
+            {formError.submit && <Alert severity="error">{formError.submit}</Alert>}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">Add</Button>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={submitting}>
+              {submitting ? 'Adding...' : 'Add'}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
+      <Snackbar
+        open={success}
+        autoHideDuration={3000}
+        onClose={() => setSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSuccess(false)} severity="success" sx={{ width: '100%' }}>
+          Transaction added successfully!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
