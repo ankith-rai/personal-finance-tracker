@@ -6,6 +6,12 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Fab, MenuItem, Box, Snackbar, Alert, InputAdornment, Typography, Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  UPDATE_TRANSACTION,
+  DELETE_TRANSACTION
+} from '../graphql/queries';
 import { styled } from '@mui/system';
 
 const StyledTableContainer = styled(TableContainer)({
@@ -42,7 +48,24 @@ const Transactions: React.FC = () => {
   const [createTransaction] = useMutation(CREATE_TRANSACTION, {
     onCompleted: () => {
       setSuccess(true);
+      setLastAction('add');
       handleClose();
+      refetch();
+    },
+  });
+  const [updateTransaction] = useMutation(UPDATE_TRANSACTION, {
+    onCompleted: () => {
+      setSuccess(true);
+      setLastAction('edit');
+      handleEditClose();
+      refetch();
+    },
+  });
+  const [deleteTransaction] = useMutation(DELETE_TRANSACTION, {
+    onCompleted: () => {
+      setSuccess(true);
+      setLastAction('delete');
+      handleDeleteClose();
       refetch();
     },
   });
@@ -59,6 +82,23 @@ const Transactions: React.FC = () => {
   const [formError, setFormError] = useState<{ [key: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [lastAction, setLastAction] = useState<'add' | 'edit' | 'delete' | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    description: '',
+    amount: '',
+    date: '',
+    type: '',
+    category: '',
+    customCategory: '',
+  });
+  const [editFormError, setEditFormError] = useState<{ [key: string]: string }>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -108,6 +148,85 @@ const Transactions: React.FC = () => {
     }
   };
 
+  // Edit handlers
+  const handleEditOpen = (transaction: Transaction) => {
+    setEditId(transaction.id.toString());
+    setEditForm({
+      description: transaction.description,
+      amount: transaction.amount.toString(),
+      date: transaction.date,
+      type: transaction.type,
+      category: CATEGORY_OPTIONS.includes(transaction.category) ? transaction.category : 'custom',
+      customCategory: CATEGORY_OPTIONS.includes(transaction.category) ? '' : transaction.category,
+    });
+    setEditFormError({});
+    setEditOpen(true);
+  };
+  const handleEditClose = () => {
+    setEditOpen(false);
+    setEditId(null);
+    setEditForm({ description: '', amount: '', date: '', type: '', category: '', customCategory: '' });
+    setEditFormError({});
+    setEditSubmitting(false);
+  };
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+    setEditFormError({ ...editFormError, [e.target.name]: '' });
+  };
+  const validateEdit = () => {
+    const errors: { [key: string]: string } = {};
+    if (!editForm.description.trim()) errors.description = 'Description is required.';
+    if (!editForm.amount || isNaN(Number(editForm.amount)) || Number(editForm.amount) <= 0) errors.amount = 'Enter a positive amount.';
+    if (!editForm.date) errors.date = 'Date is required.';
+    if (!editForm.type) errors.type = 'Type is required.';
+    if (!editForm.category && !editForm.customCategory.trim()) errors.category = 'Category is required.';
+    return errors;
+  };
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditFormError({});
+    const errors = validateEdit();
+    if (Object.keys(errors).length > 0) {
+      setEditFormError(errors);
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      await updateTransaction({
+        variables: {
+          id: editId,
+          description: editForm.description,
+          amount: parseFloat(editForm.amount),
+          date: editForm.date,
+          type: editForm.type,
+          category: editForm.category === 'custom' ? editForm.customCategory : editForm.category,
+        },
+      });
+    } catch (err) {
+      setEditFormError({ submit: 'Failed to update transaction.' });
+      setEditSubmitting(false);
+    }
+  };
+
+  // Delete handlers
+  const handleDeleteOpen = (id: string) => {
+    setDeleteId(id);
+    setDeleteOpen(true);
+  };
+  const handleDeleteClose = () => {
+    setDeleteOpen(false);
+    setDeleteId(null);
+  };
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteTransaction({ variables: { id: deleteId } });
+    } catch (err) {
+      // Optionally show error
+      setDeleteOpen(false);
+    }
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
 
@@ -122,6 +241,7 @@ const Transactions: React.FC = () => {
               <StyledTableCell>Type</StyledTableCell>
               <StyledTableCell>Category</StyledTableCell>
               <StyledTableCell align="right">Amount</StyledTableCell>
+              <StyledTableCell align="right">Actions</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -132,6 +252,10 @@ const Transactions: React.FC = () => {
                 <TableCell>{transaction.type}</TableCell>
                 <TableCell>{transaction.category}</TableCell>
                 <TableCell align="right">{transaction.amount}</TableCell>
+                <TableCell align="right">
+                  <Button size="small" onClick={() => handleEditOpen(transaction)}><EditIcon fontSize="small" /></Button>
+                  <Button size="small" color="error" onClick={() => handleDeleteOpen(transaction.id.toString())}><DeleteIcon fontSize="small" /></Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -239,6 +363,113 @@ const Transactions: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onClose={handleEditClose} maxWidth="xs" fullWidth>
+        <DialogTitle>Edit Transaction</DialogTitle>
+        <Divider />
+        <form onSubmit={handleEditSubmit}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
+            <TextField
+              label="Description"
+              name="description"
+              value={editForm.description}
+              onChange={handleEditChange}
+              fullWidth
+              required
+              error={!!editFormError.description}
+              helperText={editFormError.description || 'E.g. Grocery shopping, Salary, etc.'}
+            />
+            <TextField
+              label="Amount"
+              name="amount"
+              type="number"
+              value={editForm.amount}
+              onChange={handleEditChange}
+              fullWidth
+              required
+              error={!!editFormError.amount}
+              helperText={editFormError.amount || 'Enter a positive value'}
+              inputProps={{ step: '0.01', min: 0 }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+            />
+            <TextField
+              label="Date"
+              name="date"
+              type="date"
+              value={editForm.date}
+              onChange={handleEditChange}
+              fullWidth
+              required
+              error={!!editFormError.date}
+              helperText={editFormError.date || ''}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Type"
+              name="type"
+              value={editForm.type}
+              onChange={handleEditChange}
+              select
+              fullWidth
+              required
+              error={!!editFormError.type}
+              helperText={editFormError.type || ''}
+            >
+              <MenuItem value="income">Income</MenuItem>
+              <MenuItem value="expense">Expense</MenuItem>
+            </TextField>
+            <TextField
+              label="Category"
+              name="category"
+              value={editForm.category}
+              onChange={handleEditChange}
+              select
+              fullWidth
+              required={!editForm.customCategory}
+              error={!!editFormError.category}
+              helperText={editFormError.category || 'Choose a category or select Other to enter your own'}
+            >
+              {CATEGORY_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+              <MenuItem value="custom">Other (Custom)</MenuItem>
+            </TextField>
+            {editForm.category === 'custom' && (
+              <TextField
+                label="Custom Category"
+                name="customCategory"
+                value={editForm.customCategory}
+                onChange={handleEditChange}
+                fullWidth
+                required
+                error={!!editFormError.category}
+                helperText={editFormError.category || 'Enter your custom category'}
+              />
+            )}
+            {editFormError.submit && <Alert severity="error">{editFormError.submit}</Alert>}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleEditClose} disabled={editSubmitting}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={editSubmitting}>
+              {editSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      {/* Delete Dialog */}
+      <Dialog open={deleteOpen} onClose={handleDeleteClose} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Transaction</DialogTitle>
+        <Divider />
+        <DialogContent>
+          <Typography>Are you sure you want to delete this transaction?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteClose}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar
         open={success}
         autoHideDuration={3000}
@@ -246,7 +477,11 @@ const Transactions: React.FC = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={() => setSuccess(false)} severity="success" sx={{ width: '100%' }}>
-          Transaction added successfully!
+          {lastAction === 'delete'
+            ? 'Transaction removed successfully!'
+            : lastAction === 'edit'
+            ? 'Transaction updated successfully!'
+            : 'Transaction added successfully!'}
         </Alert>
       </Snackbar>
     </Box>

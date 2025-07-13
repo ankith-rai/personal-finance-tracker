@@ -25,6 +25,7 @@ export const typeDefs = gql`
     type: String!
     category: String!
     user: User!
+    invoiceId: ID
   }
 
   type User {
