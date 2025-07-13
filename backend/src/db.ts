@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const pool = new Pool({
     user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
+    host: process.env.DB_HOST || '127.0.0.1',
     database: process.env.DB_NAME || 'finance_tracker',
     password: process.env.DB_PASSWORD || 'postgres',
     port: parseInt(process.env.DB_PORT || '5432'),
@@ -21,18 +21,6 @@ const initDb = async () => {
                 name VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-
-            CREATE TABLE IF NOT EXISTS transactions (
-                id SERIAL PRIMARY KEY,
-                description VARCHAR(255) NOT NULL,
-                amount DECIMAL(10,2) NOT NULL,
-                date DATE NOT NULL,
-                type VARCHAR(50) NOT NULL,
-                category VARCHAR(50) NOT NULL,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
             CREATE TABLE IF NOT EXISTS invoices (
                 id SERIAL PRIMARY KEY,
                 number VARCHAR(50) UNIQUE NOT NULL,
@@ -44,11 +32,16 @@ const initDb = async () => {
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-
-            CREATE TABLE IF NOT EXISTS invoice_transactions (
-                invoice_id INTEGER REFERENCES invoices(id) ON DELETE CASCADE,
-                transaction_id INTEGER REFERENCES transactions(id) ON DELETE CASCADE,
-                PRIMARY KEY (invoice_id, transaction_id)
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                description VARCHAR(255) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                date DATE NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                invoice_id INTEGER REFERENCES invoices(id),
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
         console.log('Database initialized successfully');

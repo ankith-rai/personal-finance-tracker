@@ -15,6 +15,7 @@ interface Transaction {
   type: string;
   category: string;
   user_id: number;
+  invoice_id?: number;
 }
 
 interface Invoice {
@@ -117,13 +118,11 @@ export const resolvers = {
         );
         const invoice = invoiceResult.rows[0];
         
-        // Link transactions to invoice
-        for (const transactionId of transactions) {
-          await client.query(
-            'INSERT INTO invoice_transactions (invoice_id, transaction_id) VALUES ($1, $2)',
-            [invoice.id, transactionId]
-          );
-        }
+        // Assign transactions to invoice
+        await client.query(
+          'UPDATE transactions SET invoice_id = $1 WHERE id = ANY($2) AND user_id = $3',
+          [invoice.id, transactions, user.id]
+        );
         
         await client.query('COMMIT');
         return invoice;
@@ -165,7 +164,7 @@ export const resolvers = {
   Invoice: {
     transactions: async (parent: Invoice) => {
       const result = await pool.query(
-        'SELECT t.* FROM transactions t JOIN invoice_transactions it ON t.id = it.transaction_id WHERE it.invoice_id = $1',
+        'SELECT * FROM transactions WHERE invoice_id = $1',
         [parent.id]
       );
       return result.rows;
@@ -180,5 +179,6 @@ export const resolvers = {
       const result = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [parent.user_id]);
       return result.rows[0];
     },
+    invoiceId: (parent: Transaction) => parent.invoice_id,
   },
 };

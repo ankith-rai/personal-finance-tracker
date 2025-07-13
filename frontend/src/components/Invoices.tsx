@@ -236,59 +236,73 @@ const Invoices: React.FC = () => {
           Your Invoices
         </Typography>
         <Grid container spacing={3}>
-          {invoiceData?.getInvoices.map((invoice: any) => (
-            <Grid item xs={12} key={invoice.id}>
-              <Card>
-                <CardContent>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={8}>
-                      <Typography variant="h6" gutterBottom>
-                        Invoice #{invoice.number}
-                      </Typography>
-                      <Typography color="text.secondary" gutterBottom>
-                        Client: {invoice.clientName}
-                      </Typography>
-                      <Typography color="text.secondary" gutterBottom>
-                        Email: {invoice.clientEmail}
-                      </Typography>
-                      <Typography color="text.secondary">
-                        Due Date: {new Date(invoice.dueDate).toLocaleDateString()}
-                      </Typography>
+          {invoiceData?.getInvoices && invoiceData.getInvoices.length > 0 ? (
+            invoiceData.getInvoices.map((invoice: any) => (
+              <Grid item xs={12} key={invoice.id}>
+                <Card>
+                  <CardContent>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={8}>
+                        <Typography variant="h6" gutterBottom>
+                          Invoice #{invoice.number}
+                        </Typography>
+                        <Typography color="text.secondary" gutterBottom>
+                          Client: {invoice.clientName}
+                        </Typography>
+                        <Typography color="text.secondary" gutterBottom>
+                          Email: {invoice.clientEmail}
+                        </Typography>
+                        <Typography color="text.secondary">
+                          Due Date: {new Date(invoice.dueDate).toLocaleDateString()}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+                        <Typography variant="h6" gutterBottom>
+                          ${invoice.total}
+                        </Typography>
+                        <Chip
+                          label={invoice.status}
+                          color={getStatusColor(invoice.status) as any}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2" gutterBottom>
+                          Transactions:
+                        </Typography>
+                        {invoice.transactions && invoice.transactions.length > 0 ? (
+                          <List dense>
+                            {invoice.transactions.map((transaction: any) => (
+                              <ListItem key={transaction.id}>
+                                <ListItemText
+                                  primary={transaction.description}
+                                  secondary={new Date(transaction.date).toLocaleDateString()}
+                                />
+                                <Typography variant="body2">
+                                  ${transaction.amount}
+                                </Typography>
+                              </ListItem>
+                            ))}
+                          </List>
+                        ) : (
+                          <Typography color="text.secondary" sx={{ fontStyle: 'italic', mt: 1 }}>
+                            No transactions for this invoice.
+                          </Typography>
+                        )}
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
-                      <Typography variant="h6" gutterBottom>
-                        ${invoice.total}
-                      </Typography>
-                      <Chip
-                        label={invoice.status}
-                        color={getStatusColor(invoice.status) as any}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="subtitle2" gutterBottom>
-                        Transactions:
-                      </Typography>
-                      <List dense>
-                        {invoice.transactions.map((transaction: any) => (
-                          <ListItem key={transaction.id}>
-                            <ListItemText
-                              primary={transaction.description}
-                              secondary={new Date(transaction.date).toLocaleDateString()}
-                            />
-                            <Typography variant="body2">
-                              ${transaction.amount}
-                            </Typography>
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Typography color="text.secondary" sx={{ fontStyle: 'italic', mt: 2 }}>
+                No invoices found.
+              </Typography>
             </Grid>
-          ))}
+          )}
         </Grid>
       </Paper>
     </Container>
