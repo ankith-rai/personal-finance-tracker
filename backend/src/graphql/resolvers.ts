@@ -15,7 +15,6 @@ interface Transaction {
   type: string;
   category: string;
   user_id: number;
-  invoice_id?: number;
 }
 
 interface Invoice {
@@ -150,6 +149,36 @@ export const resolvers = {
       const result = await pool.query('DELETE FROM transactions WHERE id = $1', [id]);
       return (result.rowCount ?? 0) > 0;
     },
+    updateInvoice: async (
+      _: any,
+      { id, clientName, clientEmail, dueDate, status }: { id: number; clientName?: string; clientEmail?: string; dueDate?: string; status?: string },
+      { user }: Context
+    ) => {
+      if (!user) throw new AuthenticationError('Not authenticated');
+      const result = await pool.query(
+        `UPDATE invoices
+         SET client_name = COALESCE($1, client_name),
+             client_email = COALESCE($2, client_email),
+             due_date = COALESCE($3, due_date),
+             status = COALESCE($4, status)
+         WHERE id = $5 AND user_id = $6
+         RETURNING *`,
+        [clientName, clientEmail, dueDate, status, id, user.id]
+      );
+      return result.rows[0];
+    },
+    deleteInvoice: async (
+      _: any,
+      { id }: { id: number },
+      { user }: Context
+    ) => {
+      if (!user) throw new AuthenticationError('Not authenticated');
+      const result = await pool.query(
+        'DELETE FROM invoices WHERE id = $1 AND user_id = $2',
+        [id, user.id]
+      );
+      return (result.rowCount ?? 0) > 0;
+    },
   },
   User: {
     transactions: async (parent: User) => {
@@ -164,7 +193,7 @@ export const resolvers = {
   Invoice: {
     transactions: async (parent: Invoice) => {
       const result = await pool.query(
-        'SELECT * FROM transactions WHERE invoice_id = $1',
+        'SELECT t.* FROM transactions t JOIN invoice_transactions it ON t.id = it.transaction_id WHERE it.invoice_id = $1',
         [parent.id]
       );
       return result.rows;
@@ -179,6 +208,5 @@ export const resolvers = {
       const result = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [parent.user_id]);
       return result.rows[0];
     },
-    invoiceId: (parent: Transaction) => parent.invoice_id,
   },
 };

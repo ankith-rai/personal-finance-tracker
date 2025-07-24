@@ -44,3 +44,23 @@ export const DELETE_TRANSACTION = gql`
     deleteTransaction(id: $id)
   }
 `;
+
+export const UPDATE_INVOICE = gql`
+  mutation UpdateInvoice($id: ID!, $clientName: String, $clientEmail: String, $dueDate: String, $status: String) {
+    updateInvoice(id: $id, clientName: $clientName, clientEmail: $clientEmail, dueDate: $dueDate, status: $status) {
+      id
+      number
+      clientName
+      clientEmail
+      dueDate
+      total
+      status
+    }
+  }
+`;
+
+export const DELETE_INVOICE = gql`
+  mutation DeleteInvoice($id: ID!) {
+    deleteInvoice(id: $id)
+  }
+`;
