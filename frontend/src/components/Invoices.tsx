@@ -18,10 +18,18 @@ import {
   Card,
   CardContent,
   Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { UPDATE_INVOICE, DELETE_INVOICE } from '../graphql/queries';
 
 const GET_INVOICES = gql`
   query GetInvoices {
@@ -76,10 +84,52 @@ const Invoices: React.FC = () => {
   const [clientEmail, setClientEmail] = useState('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    clientName: '',
+    clientEmail: '',
+    dueDate: '',
+    status: '',
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
   const { loading: loadingInvoices, error: errorInvoices, data: invoiceData } = useQuery(GET_INVOICES);
   const { loading: loadingTransactions, error: errorTransactions, data: transactionData } = useQuery(GET_TRANSACTIONS);
   const [createInvoice] = useMutation(CREATE_INVOICE, {
     refetchQueries: [{ query: GET_INVOICES }],
+  });
+
+  const [updateInvoice] = useMutation(UPDATE_INVOICE, {
+    refetchQueries: [{ query: GET_INVOICES }],
+    onCompleted: () => {
+      setEditOpen(false);
+      setEditInvoice(null);
+      setEditSubmitting(false);
+      setEditError('');
+    },
+    onError: (err) => {
+      setEditError('Failed to update invoice.');
+      setEditSubmitting(false);
+    }
+  });
+  const [deleteInvoice] = useMutation(DELETE_INVOICE, {
+    refetchQueries: [{ query: GET_INVOICES }],
+    onCompleted: () => {
+      setDeleteOpen(false);
+      setDeleteInvoiceId(null);
+      setDeleteSubmitting(false);
+    },
+    onError: () => {
+      setDeleteOpen(false);
+      setDeleteInvoiceId(null);
+      setDeleteSubmitting(false);
+    }
   });
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
@@ -110,6 +160,71 @@ const Invoices: React.FC = () => {
         ? prev.filter(id => id !== transactionId)
         : [...prev, transactionId]
     );
+  };
+
+  // Edit handlers
+  const handleEditOpen = (invoice: any) => {
+    setEditInvoice(invoice);
+    setEditForm({
+      clientName: invoice.clientName,
+      clientEmail: invoice.clientEmail,
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    });
+    setEditOpen(true);
+    setEditError('');
+  };
+  const handleEditClose = () => {
+    setEditOpen(false);
+    setEditInvoice(null);
+    setEditForm({ clientName: '', clientEmail: '', dueDate: '', status: '' });
+    setEditError('');
+    setEditSubmitting(false);
+  };
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      await updateInvoice({
+        variables: {
+          id: editInvoice.id,
+          clientName: editForm.clientName,
+          clientEmail: editForm.clientEmail,
+          dueDate: editForm.dueDate,
+          status: editForm.status,
+        },
+      });
+    } catch (err) {
+      setEditError('Failed to update invoice.');
+      setEditSubmitting(false);
+    }
+  };
+
+  // Delete handlers
+  const handleDeleteOpen = (id: string) => {
+    setDeleteInvoiceId(id);
+    setDeleteOpen(true);
+    setDeleteSubmitting(false);
+  };
+  const handleDeleteClose = () => {
+    setDeleteOpen(false);
+    setDeleteInvoiceId(null);
+    setDeleteSubmitting(false);
+  };
+  const handleDeleteConfirm = async () => {
+    if (!deleteInvoiceId) return;
+    setDeleteSubmitting(true);
+    try {
+      await deleteInvoice({ variables: { id: deleteInvoiceId } });
+    } catch (err) {
+      setDeleteOpen(false);
+      setDeleteInvoiceId(null);
+      setDeleteSubmitting(false);
+    }
   };
 
   if (loadingInvoices || loadingTransactions) {
@@ -264,7 +379,10 @@ const Invoices: React.FC = () => {
                           label={invoice.status}
                           color={getStatusColor(invoice.status) as any}
                           size="small"
+                          sx={{ mr: 1 }}
                         />
+                        <EditIcon sx={{ cursor: 'pointer', mr: 1 }} onClick={() => handleEditOpen(invoice)} />
+                        <DeleteIcon sx={{ cursor: 'pointer' }} color="error" onClick={() => handleDeleteOpen(invoice.id)} />
                       </Grid>
                       <Grid item xs={12}>
                         <Divider sx={{ my: 2 }} />
@@ -305,6 +423,77 @@ const Invoices: React.FC = () => {
           )}
         </Grid>
       </Paper>
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={editOpen} onClose={handleEditClose} maxWidth="xs" fullWidth>
+        <DialogTitle>Edit Invoice</DialogTitle>
+        <Divider />
+        <form onSubmit={handleEditSubmit}>
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
+            <TextField
+              label="Client Name"
+              name="clientName"
+              value={editForm.clientName}
+              onChange={handleEditChange}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Client Email"
+              name="clientEmail"
+              type="email"
+              value={editForm.clientEmail}
+              onChange={handleEditChange}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Due Date"
+              name="dueDate"
+              type="date"
+              value={editForm.dueDate}
+              onChange={handleEditChange}
+              fullWidth
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Status"
+              name="status"
+              value={editForm.status}
+              onChange={handleEditChange}
+              select
+              fullWidth
+              required
+            >
+              <MenuItem value="PENDING">Pending</MenuItem>
+              <MenuItem value="PAID">Paid</MenuItem>
+              <MenuItem value="CANCELLED">Cancelled</MenuItem>
+            </TextField>
+            {editError && <Alert severity="error">{editError}</Alert>}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleEditClose} disabled={editSubmitting}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={editSubmitting}>
+              {editSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      {/* Delete Invoice Dialog */}
+      <Dialog open={deleteOpen} onClose={handleDeleteClose} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Invoice</DialogTitle>
+        <Divider />
+        <DialogContent>
+          <Typography>Are you sure you want to delete this invoice?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteClose} disabled={deleteSubmitting}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained" disabled={deleteSubmitting}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
